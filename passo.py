@@ -10,15 +10,33 @@ from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import time
 from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import StaleElementReferenceException
 import datetime
-driver=webdriver.Chrome()
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+timeout=50
+
+
+
+def wait_for_element(driver, value, timeout):
+    print('G')
+    try:
+        a = WebDriverWait(driver, timeout, ignored_exceptions=(StaleElementReferenceException,)) \
+            .until(EC.presence_of_element_located((By.XPATH, value)))
+    except TimeoutException:
+        print("TimeoutException: Element with XPath '{}' not found within {} seconds.".format(value, timeout))
+        return None
+    print('c')
+    return a
+driver = webdriver.Chrome()
+
 #driver.get("http://selenium.dev")
 ticketUrl="https://www.passo.com.tr/tr/kategori/futbol-mac-biletleri/4615"
 loginUrl="https://www.passo.com.tr/tr/giris"
 
-ticketTeam='Beşiktaş' #the team whose ticket will be bought
-matchTime='20:00'
+ticketTeam='Galatasaray' #the team whose ticket will be bought
+matchTime='00:18'
 def login():#in start of the application some information is needed. Email, password and matchTime. Also security number will be asked too
     driver.get(loginUrl)
     email='eminer.2006@gmail.com'
@@ -39,54 +57,71 @@ def login():#in start of the application some information is needed. Email, pass
     securityHolder.send_keys(number)
     time.sleep(0.5)
     enterButton.click()
-def advirtasement():
+    
+  
+def delay():
+    timeoutFlag=False
+    now = datetime.datetime.now() 
+    print('DDDDD %d',now)
     try:
-        closeBtn= driver.find_element(By.XPATH,'//button[@class="swal2-cancel swal2-styled"]')
-        closeBtn.click()
-    except:
+        x= WebDriverWait(driver, timeout).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
+    except TimeoutException:
+        print("EXCEPTTTTT")
+        timeoutFlag=True
         pass
+    now = datetime.datetime.now() 
+    print('BBBBBB %d',now)
+    return timeoutFlag
+
+def advirtasement():
     
-    
-    
-    
-    
-    
-    
+    wait_for_element(driver, '//a[@href="/tr/kategori/futbol-mac-biletleri/4615"]', 5)
+    try:
+        if driver.find_element(By.XPATH,'//button[@class="swal2-cancel swal2-styled"]').is_enabled():
+            driver.find_element(By.XPATH,'//button[@class="swal2-cancel swal2-styled"]').click()
+    except NoSuchElementException:
+        print('noAdvertisement')
+        pass
+        
 
 def findMatch():#fonction for determine the id of the match, and open the ticket page of the match
     #futbol= driver.find_element(By.XPATH,'//a[@class="nav-link text-dark" and @href="/tr/kategori/futbol-mac-biletleri/4615"]')
     #futbol.click()
     #driver.get(ticketUrl)
-    tr1=driver.find_element(By.XPATH,'//div[@class="wrapper row event-search-items"]').is_enabled()
-    now = datetime.datetime.now() 
-    print(now)
-    while not tr1:
-        time.sleep(0.1)
-        tr1=driver.find_element(By.XPATH,'//div[@class="wrapper row event-search-items"]').is_enabled()
-        now = datetime.datetime.now() 
-        print(now)
-    allGames =driver.find_element(By.XPATH,'//div[@class="wrapper row event-search-items"]')
-    innerhtml=allGames.get_attribute("innerHTML")
-    dataSoup=BeautifulSoup(innerhtml,'html.parser')
-    all_tags = [tag for tag in dataSoup.find_all('div')]
-    currentId=0
-    for tag in all_tags:
-        if tag.get('class') is not None and "col-md-4" in tag.get('class'):#looks for match list, matches seperated via col-md-4 tags
-            currentId=tag.get('id')
-        if ticketTeam in tag.text:
-            break
-    button = driver.find_element(By.ID, currentId)
-    button.click()
-
-        
+    flag=False
+    wait_for_element(driver, '//div[@class="wrapper row event-search-items"]', timeout)
+    timeoutFlag=False
+    if timeoutFlag==False:
+        allGames =driver.find_element(By.XPATH,'//div[@class="wrapper row event-search-items"]')
+        innerhtml=allGames.get_attribute("innerHTML")
+        dataSoup=BeautifulSoup(innerhtml,'html.parser')
+        all_tags = [tag for tag in dataSoup.find_all('div')]
+        currentId=0
+        for tag in all_tags:
+            if tag.get('class') is not None and "col-md-4" in tag.get('class'):#looks for match list, matches seperated via col-md-4 tags
+                currentId=tag.get('id')
+            if ticketTeam in tag.text:
+                flag=True
+                break
+        if flag:
+            button = driver.find_element(By.ID, currentId)
+            button.click()
+        else:
+            findMatch()
+    else:
+        findMatch()
     return currentId
 
 def buyTicket():
     window_after = driver.window_handles[1]
     driver.switch_to.window(window_after)
-    purchaseBtn = driver.find_elements(By.XPATH,'//button[@class="red-btn"]')
     time.sleep(1)
+    print('LOC1')
     driver.execute_script("window.scrollTo(0, 400)")#scrolls the page for the button
+    wait_for_element(driver, '//button[@class="red-btn"]', timeout)
+    print('LOC2')
+    #delay()
+    purchaseBtn = driver.find_elements(By.XPATH,'//button[@class="red-btn"]')
     for btn in purchaseBtn:
         if btn.text=='SATIN AL':
             btn.click()
@@ -94,6 +129,7 @@ def buyTicket():
             continue
         
 def selectCategory(flag):
+    wait_for_element(driver, '//div[@class="col-12"]/select', timeout)
     choose=driver.find_elements(By.XPATH,'//div[@class="col-12"]/select')
     innerhtml=choose[1].get_attribute("innerHTML")
     dataSoup=BeautifulSoup(innerhtml,'html.parser')
@@ -107,7 +143,7 @@ def selectCategory(flag):
         cat1= driver.find_element(By.XPATH,xpath)
         if ticketTeam=='Galatasaray' and ('Delux' in cat1.text or '8. Kategori' in cat1.text or '9. Kategori' in cat1.text or '7. Kategori' in cat1.text or '6. Kategori' in cat1.text) or ticketTeam!='Galatasaray' :
             cat1.click()
-            time.sleep(0.5)
+            time.sleep(1.5)
         else:
             flag+=1
             continue
@@ -184,22 +220,26 @@ def matchTimer(matchTime):
             break
         
 login()
-time.sleep(2)
 advirtasement()
 matchTimer(matchTime)
-time.sleep(1)
+wait_for_element(driver, '//a[@href="/tr/kategori/futbol-mac-biletleri/4615"]', timeout)
 btn=driver.find_element(By.XPATH,'//a[@href="/tr/kategori/futbol-mac-biletleri/4615"]')
 btn.click()
-time.sleep(1)
+wait_for_element(driver, '//div[@class="wrapper row event-search-items"]', timeout)
 findMatch()
-time.sleep(1.5)
+time.sleep(1)
+now = datetime.datetime.now() 
+print('DENEME',now)
+wait_for_element(driver, '//div[@class="box first"]', 3)#TAM BURDA HATA VAR NEDENSE BİR TÜRLÜ, HTMLİ ALGILAMIYOR EN KÖTÜ 3 5 SANİYE GAP VERİP GNDER
+now = datetime.datetime.now() #FİND MATCH İTERASYON YAPIYOR ACABA ONUN DA MI ZAMAN KISMI DÜZGÜN ÇALIŞIYOR ?
+print('DENEMEE',now)
 buyTicket()
-time.sleep(1.50)
 if ticketTeam=='Galatasaray':
     #discount()
     time.sleep(0.25)
 time.sleep(0.5)
 try:
+    #delay()
     selectCategory(0)
 except IndexError:
     btn=driver.find_element(By.XPATH,'//a[@href="/tr/kategori/futbol-mac-biletleri/4615"]')
@@ -209,16 +249,20 @@ except IndexError:
     buyTicket()
     time.sleep(1.50)
     try:
+        #delay()
         selectCategory(0)
     except IndexError:
         driver.close()
     pass
-except ElementClickInterceptedException: 
-    time.sleep(1)
+ticketCount(1)
+try:
+    #delay()
     btn=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
     btn.click()
+except NoSuchElementException:
     pass
-ticketCount(1)
+#delay()
+
 blockCount()
 
 now = datetime.datetime.now() 
