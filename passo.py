@@ -10,14 +10,15 @@ from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import time
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import ElementClickInterceptedException
 import datetime
 driver=webdriver.Chrome()
 #driver.get("http://selenium.dev")
 ticketUrl="https://www.passo.com.tr/tr/kategori/futbol-mac-biletleri/4615"
 loginUrl="https://www.passo.com.tr/tr/giris"
 
-ticketTeam='Gençlerbirliği' #the team whose ticket will be bought
-matchTime='15:00'
+ticketTeam='Beşiktaş' #the team whose ticket will be bought
+matchTime='20:00'
 def login():#in start of the application some information is needed. Email, password and matchTime. Also security number will be asked too
     driver.get(loginUrl)
     email='eminer.2006@gmail.com'
@@ -56,7 +57,14 @@ def findMatch():#fonction for determine the id of the match, and open the ticket
     #futbol= driver.find_element(By.XPATH,'//a[@class="nav-link text-dark" and @href="/tr/kategori/futbol-mac-biletleri/4615"]')
     #futbol.click()
     #driver.get(ticketUrl)
-    time.sleep(0.5)
+    tr1=driver.find_element(By.XPATH,'//div[@class="wrapper row event-search-items"]').is_enabled()
+    now = datetime.datetime.now() 
+    print(now)
+    while not tr1:
+        time.sleep(0.1)
+        tr1=driver.find_element(By.XPATH,'//div[@class="wrapper row event-search-items"]').is_enabled()
+        now = datetime.datetime.now() 
+        print(now)
     allGames =driver.find_element(By.XPATH,'//div[@class="wrapper row event-search-items"]')
     innerhtml=allGames.get_attribute("innerHTML")
     dataSoup=BeautifulSoup(innerhtml,'html.parser')
@@ -87,19 +95,19 @@ def buyTicket():
         
 def selectCategory(flag):
     choose=driver.find_elements(By.XPATH,'//div[@class="col-12"]/select')
-    choose[len(choose)-1]
     innerhtml=choose[1].get_attribute("innerHTML")
     dataSoup=BeautifulSoup(innerhtml,'html.parser')
     all_tags = [tag for tag in dataSoup.find_all('option')]
     avaliable=False
     while(not avaliable):
         count=(len(all_tags)-2)-flag
+        if ticketTeam=='Beşiktaş':
+            count=(len(all_tags)-5)-flag
         xpath='//option[@value="{}: Object"]'.format(count)
         cat1= driver.find_element(By.XPATH,xpath)
-        if ticketTeam=='Galatasaray' and ('Delux' in cat1.text or '8. Kategori' in cat1.text or '9. Kategori' in cat1.text or '5. Kategori' in cat1.text or '6. Kategori' in cat1.text) or ticketTeam!='Galatasaray':
+        if ticketTeam=='Galatasaray' and ('Delux' in cat1.text or '8. Kategori' in cat1.text or '9. Kategori' in cat1.text or '7. Kategori' in cat1.text or '6. Kategori' in cat1.text) or ticketTeam!='Galatasaray' :
             cat1.click()
             time.sleep(0.5)
-            
         else:
             flag+=1
             continue
@@ -176,7 +184,7 @@ def matchTimer(matchTime):
             break
         
 login()
-time.sleep(1)
+time.sleep(2)
 advirtasement()
 matchTimer(matchTime)
 time.sleep(1)
@@ -191,7 +199,25 @@ if ticketTeam=='Galatasaray':
     #discount()
     time.sleep(0.25)
 time.sleep(0.5)
-selectCategory(0)
+try:
+    selectCategory(0)
+except IndexError:
+    btn=driver.find_element(By.XPATH,'//a[@href="/tr/kategori/futbol-mac-biletleri/4615"]')
+    btn.click()
+    findMatch()
+    time.sleep(1.5)
+    buyTicket()
+    time.sleep(1.50)
+    try:
+        selectCategory(0)
+    except IndexError:
+        driver.close()
+    pass
+except ElementClickInterceptedException: 
+    time.sleep(1)
+    btn=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
+    btn.click()
+    pass
 ticketCount(1)
 blockCount()
 
