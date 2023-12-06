@@ -16,14 +16,14 @@ driver=webdriver.Chrome()
 ticketUrl="https://www.passo.com.tr/tr/kategori/futbol-mac-biletleri/4615"
 loginUrl="https://www.passo.com.tr/tr/giris"
 
-ticketTeam='Galatasaray' #the team whose ticket will be bought
-
+ticketTeam='Gençlerbirliği' #the team whose ticket will be bought
+matchTime='15:00'
 def login():#in start of the application some information is needed. Email, password and matchTime. Also security number will be asked too
     driver.get(loginUrl)
     email='eminer.2006@gmail.com'
     password='31cekeneren7A'
     number=input("Lütfen Güvenlik Anahtarını Giriniz!")
-    matchTime='02:46'
+    
    # loginBtn=driver.find_element(By.XPATH,'//i[@class="passo-icon passo-icon-user mr-1 small"]')
     driver.set_window_size(1024, 600)
     driver.maximize_window()
@@ -38,6 +38,12 @@ def login():#in start of the application some information is needed. Email, pass
     securityHolder.send_keys(number)
     time.sleep(0.5)
     enterButton.click()
+def advirtasement():
+    try:
+        closeBtn= driver.find_element(By.XPATH,'//button[@class="swal2-cancel swal2-styled"]')
+        closeBtn.click()
+    except:
+        pass
     
     
     
@@ -80,24 +86,36 @@ def buyTicket():
             continue
         
 def selectCategory(flag):
-    if flag:
-        count=12
-    else:
-        count=13
-    count=2
-    while(True):
+    choose=driver.find_elements(By.XPATH,'//div[@class="col-12"]/select')
+    choose[len(choose)-1]
+    innerhtml=choose[1].get_attribute("innerHTML")
+    dataSoup=BeautifulSoup(innerhtml,'html.parser')
+    all_tags = [tag for tag in dataSoup.find_all('option')]
+    avaliable=False
+    while(not avaliable):
+        count=(len(all_tags)-2)-flag
         xpath='//option[@value="{}: Object"]'.format(count)
         cat1= driver.find_element(By.XPATH,xpath)
-        print(cat1.text)
-        if 'Delux' in cat1.text or '8. Kategori' in cat1.text or '9. Kategori' in cat1.text:
+        if ticketTeam=='Galatasaray' and ('Delux' in cat1.text or '8. Kategori' in cat1.text or '9. Kategori' in cat1.text or '5. Kategori' in cat1.text or '6. Kategori' in cat1.text) or ticketTeam!='Galatasaray':
             cat1.click()
-            break
+            time.sleep(0.5)
+            
         else:
+            flag+=1
             continue
+        try:
+            while(True):
+                message = driver.find_element(By.XPATH,'//div[@id="swal2-content"]')
+                if 'Bu kategori için uygun koltuk bulunamadı!' ==  message.text :
+                    okayBtn=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
+                    okayBtn.click()
+                    flag+=1
+                    break
+        except NoSuchElementException:
+            avaliable=True
+            pass
         
 def discount():
-    flag=True
-    avaliable=False
     try:
         idInput= driver.find_element(By.XPATH,'//input[@type="text" and @placeholder="Lütfen TC Kimlik Numaranızı Giriniz."]')
         idInput.send_keys('17615315818')
@@ -112,28 +130,7 @@ def discount():
     okayBtn=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
     okayBtn.click()
     time.sleep(1.5)
-    selectCategory(flag)
-    try:
-        message = driver.find_element(By.XPATH,'//div[@id="swal2-content"]')
-        if 'Bu kategori için uygun koltuk bulunamadı!' ==  message.text :
-            okayBtn=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
-            okayBtn.click()
-            flag=False
-            selectCategory(flag)
-            try:
-                secondMessage = driver.find_element(By.XPATH,'//div[@id="swal2-content"]')
-                if 'Bu kategori için uygun koltuk bulunamadı!' ==  message.text :
-                    okayBtn=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
-                    okayBtn.click()
-                    avaliable=False
-            except NoSuchElementException:
-                avaliable=True
-                pass
-        
-    except NoSuchElementException:
-        avalaible=True
-        pass
-    return avalaible
+    
 def ticketCount(count):
     time.sleep(0.75)
     selections=driver.find_elements(By.XPATH,'//select[@class="form-control"]/option')
@@ -177,19 +174,24 @@ def matchTimer(matchTime):
         curr=now.strftime('%H:%M')
         if (int(matchTime[0:2])< int(now.strftime('%H'))) or  ((int(matchTime[0:2]) == int(now.strftime('%H'))) and (int(matchTime[3:5]) < int(now.strftime('%M')))):
             break
-    
-
+        
 login()
+time.sleep(1)
+advirtasement()
 matchTimer(matchTime)
 time.sleep(1)
 btn=driver.find_element(By.XPATH,'//a[@href="/tr/kategori/futbol-mac-biletleri/4615"]')
 btn.click()
 time.sleep(1)
 findMatch()
-time.sleep(1)
+time.sleep(1.5)
 buyTicket()
-time.sleep(0.50)
-isTicketFound= discount()
+time.sleep(1.50)
+if ticketTeam=='Galatasaray':
+    #discount()
+    time.sleep(0.25)
+time.sleep(0.5)
+selectCategory(0)
 ticketCount(1)
 blockCount()
 
