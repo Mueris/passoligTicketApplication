@@ -12,7 +12,7 @@ import time
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import ElementClickInterceptedException
-
+from selenium.webdriver.chrome.options import Options
 import datetime
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -21,12 +21,37 @@ from selenium.webdriver.support import expected_conditions as EC
 timeout=50
 
 driver = webdriver.Chrome()
+options = Options()
+options.add_argument("--headless=new")
+driver2=webdriver.Chrome(options=options)
 
+def export_cookies(driver):
+    with open("cookies.txt", "w") as fd:
+        fd.write(str(driver.get_cookies()))
+
+def import_cookies(driver):
+    with open("cookies.txt", "r") as fd:
+        for cookie in eval(fd.read()):
+            driver.add_cookie(cookie)
+
+def headless():
+    driver2.get('https://www.passo.com.tr/tr/etkinlik/trendyol-super-lig-sivasspor-galatasaray-bggrup-yeni-dort-eylul-stadyumu-mac-bileti-passo/5800327')
+    element = driver2.find_elements(By.CSS_SELECTOR,'.box')
+    innerhtml=element[1].get_attribute("innerHTML")
+    dataSoup=BeautifulSoup(innerhtml,'html.parser')
+    all_tags = [tag for tag in dataSoup.find_all('li')]
+    for tag in all_tags:
+        print(tag.text)
+    
+    
+    
+    
 #driver.get("http://selenium.dev")
 ticketUrl="https://www.passo.com.tr/tr/kategori/futbol-mac-biletleri/4615"
 loginUrl="https://www.passo.com.tr/tr/giris"
 
 ticketTeam='Galatasaray' #the team whose ticket will be bought
+ticketType='Deplasman'
 matchTime='20:24'
 
 
@@ -59,6 +84,7 @@ def login():#in start of the application some information is needed. Email, pass
     passwordHolder=driver.find_element(By.XPATH,'//input[@type="password" and @autocomplete="current-password"]')
     securityHolder=driver.find_element(By.XPATH,'//input[@type="text" and @autocomplete="disabled"]')
     enterButton=driver.find_element(By.XPATH,'//button[@class="black-btn"]')
+    
     try:
         driver.find_element(By.XPATH,'//a[@aria-label="dismiss cookie message"]').click()
     except NoSuchElementException:
@@ -156,21 +182,22 @@ def selectCategory(flag):
             count=(len(all_tags)-5)-flag
         xpath='//option[@value="{}: Object"]'.format(count)
         cat1= driver.find_element(By.XPATH,xpath)
-        if ticketTeam=='Galatasaray' and ('Delux' in cat1.text or '8. Kategori' in cat1.text or '9. Kategori' in cat1.text or '7. Kategori' in cat1.text or '6. Kategori' in cat1.text) or ticketTeam!='Galatasaray' :
+        if ticketTeam=='Galatasaray' and ('Delux' in cat1.text or '8. Kategori' in cat1.text or '9. Kategori' in cat1.text or '7. Kategori' in cat1.text or '6. Kategori' in cat1.text) or ticketTeam!='Galatasaray' or ticketType=='Deplasman':
             cat1.click()
-            time.sleep(1.5)
+        elif ticketType=='Deplasman' and 'Misafir'.lower() in cat1.text.lower():
+            cat1.click()
         else:
             flag+=1
             continue
         try:
             while(True):
-                message = driver.find_element(By.XPATH,'//div[@id="swal2-content"]')
-                if 'Bu kategori için uygun koltuk bulunamadı!' ==  message.text :
+                message= wait_for_element(driver, By.XPATH,'//div[@id="swal2-content"]', 2)
+                if 'Bu kategori için uygun koltuk bulunamadı!' ==  message.text:
                     okayBtn=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
                     okayBtn.click()
                     flag+=1
                     break
-        except NoSuchElementException:
+        except (NoSuchElementException, AttributeError):
             avaliable=True
             pass
         
