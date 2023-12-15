@@ -45,8 +45,8 @@ loginUrl="https://www.passo.com.tr/tr/giris"
 
 ticketTeam='Galatasaray' #the team whose ticket will be bought
 ticketType='Ev'
-matchTime=input(" MAÇ SAATİNİ SAAT:DAKİKA FORMATINDA YAZINIZI; ÖRNEK: 17:20")
-print(matchTime)
+#matchTime=input(" MAÇ SAATİNİ SAAT:DAKİKA FORMATINDA YAZINIZI; ÖRNEK: 17:20 \n")
+matchTime="02:49"
 
 
 def wait_for_all_elements(driver,by, value, timeout):
@@ -67,7 +67,11 @@ def login():#in start of the application some information is needed. Email, pass
 
     email='eminer.2006@gmail.com'
     password='31cekeneren7A'
-    number=input("Lütfen Güvenlik Anahtarını Giriniz!")
+    """""
+    email=input("Kullanıcı emaili: ")
+    password=input("Şifrenizi Giriniz: ")
+    """
+    number=input("Lütfen Açılan Sitedeki Güvenlik Anahtarını Giriniz!")
     
    # loginBtn=driver.find_element(By.XPATH,'//i[@class="passo-icon passo-icon-user mr-1 small"]')
     driver.set_window_size(1024, 600)
@@ -189,7 +193,7 @@ def selectCategory(flag):
         try:
             while(True):
                 time.sleep(0.25)
-                message= wait_for_element(driver, By.XPATH,'//div[@id="swal2-content"]', 3)
+                message= wait_for_element(driver, By.XPATH,'//div[@id="swal2-content"]', 2)
                 if 'Bu kategori için uygun koltuk bulunamadı!' ==  message.text:
                     okayBtn=wait_for_element(driver, By.XPATH, '//button[@class="swal2-confirm swal2-styled"]', 3)
                     okayBtn.click()
@@ -222,7 +226,6 @@ def loyalityCard():
         time.sleep(1.5)
     
 def ticketCount(count):
-    time.sleep(0.75)
     selections=wait_for_all_elements(driver, By.XPATH,'//select[@class="form-control"]/option', timeout)
     counter=0
     if count > len(selections):
@@ -242,15 +245,15 @@ def blockCount():
             time.sleep(0.5)
             findSeat= wait_for_element(driver, By.XPATH, '//button[@id="best_available_button"]', timeout)
             findSeat.click()
-            time.sleep(1)
             try:
-                notAvaliable=driver.find_element(By.XPATH,'//button[@class="swal2-confirm swal2-styled"]')
-                notAvaliable.click()
-                continue
+                notAvaliable=wait_for_element(driver,By.XPATH,'//button[@class="swal2-confirm swal2-styled"]',2)
+                if notAvaliable is not None:
+                    notAvaliable.click()
+                    continue
             except NoSuchElementException:
                 pass
             try:
-                confirmText=driver.find_element(By.XPATH,'//div[@class="text-secondary"]/span')
+                confirmText=wait_for_element(driver,By.XPATH,'//div[@class="text-secondary"]/span',0.1)
                 print('BAŞARILI')
                 flag=True
                 return flag
