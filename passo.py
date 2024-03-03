@@ -227,7 +227,7 @@ def loyalityCard():
     
 def ticketCount(count):
     selections=wait_for_all_elements(driver, By.XPATH,'//select[@class="form-control"]/option', timeout)
-    counter=0
+    counter=0#
     if count > len(selections):
         count=1   
     for tag in selections:
